@@ -43,3 +43,4 @@ There's a bug with YouTube's VP9 encoding that causes videos to be broken. [FFmp
 - Add option to choose between VFR and CFR (only VFR supported at the moment)
 - Add option to choose different output resolution at runtime
 - Optimize non-music removal step so videos aren't transcoded twice
+- Add option for outro and allow the last song to play out fully.
