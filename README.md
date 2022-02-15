@@ -16,7 +16,7 @@ On Ubuntu these can be installed with:
 > https://www.youtube.com/watch?v=jNQXAC9IVRw
 
 # OPTIONAL ARGUMENTS
-By default this script runs with the 'ultrafast' preset which runs the fastest at the expense of quality and storage space. This can be changed by supplying the preferred preset as an argument. For example, this would generate the smallest and highest quality video file.
+By default this script runs with the 'ultrafast' preset which runs the fastest at the expense of quality and storage space. This can be changed by supplying the preferred preset as an argument. For example, this would generate the smallest and highest quality video file:
 
 `python3 r.py veryslow`
 
