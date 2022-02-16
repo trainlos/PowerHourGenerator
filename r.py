@@ -1,20 +1,25 @@
-import yt_dlp, random, os, sys, shutil, subprocess, textwrap, re, json
+import yt_dlp, random, os, sys, shutil, subprocess, textwrap, re, json, argparse
 from datetime import datetime
 from yt_dlp.postprocessor.sponsorblock import SponsorBlockPP
 
-# Output width
-outw = 1920
-# Output height
-outh = 1080
-
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--preset', type = str, choices = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow', 'placebo'], default='ultrafast')
+    parser.add_argument('--fps', type = float, default = 24000/1001)
+    parser.add_argument('--vfr', type = int, default = 0)
+    parser.add_argument('--outw', type = int, default = 1920)
+    parser.add_argument('--outh', type = int, default = 1080)
+    # parser.add_argument('--outro',  type=str)
+    main.args = parser.parse_args()
+
     if not os.path.exists('intro.mp4'):
         sys.exit('intro.mp4 file is missing')
 
     if not os.path.exists('doorbell.wav'):
         sys.exit('doorbell.wav file is missing')
 
-    with open('list.txt') as list:
+    with open('list.txt', 'a+') as list:
+        list.seek(0)
         vids = []
         for line in list:
             vids.append(line.rstrip())
@@ -31,18 +36,9 @@ def main():
         for x in range(60):
             f.write('\nfile \'conv/' + str(x+1) + '.mp4\'')
 
-    q = 'ultrafast'
-    if (len(sys.argv) > 1):
-        q = sys.argv[1]
+    subprocess.run(buildFFmpegCommand('intro.mp4', 'temp/conv/intro.mp4', True))
 
-    loudness = loud('intro.mp4')
-    if 'inf' in loudness['input_i'] or 'inf' in loudness['input_tp'] or 'inf' in loudness['target_offset']:
-        os.system('ffmpeg -hide_banner -i intro.mp4 -c:v libx264 -profile:v baseline -level:v 4.0 -crf 18 -preset ' + q + ' -pix_fmt yuv420p -c:a aac -b:a 256k -ar 48000 -vf \"scale=(iw*sar)*min(' + str(outw) + '/(iw*sar)\\,' + str(outh) + '/ih):ih*min(' + str(outw) + '/(iw*sar)\\,' + str(outh) + '/ih), pad=' + str(outw) + ':' + str(outh) + ':(' + str(outw) + '-iw*min(' + str(outw) + '/iw\\,' + str(outh) + '/ih))/2:(' + str(outh) + '-ih*min(' + str(outw) + '/iw\\,' + str(outh) + '/ih))/2, fps=23.976\" temp/conv/intro.mp4')
-    else:
-        os.system('ffmpeg -hide_banner -i intro.mp4 -c:v libx264 -profile:v baseline -level:v 4.0 -crf 18 -preset ' + q + ' -pix_fmt yuv420p -c:a aac -b:a 256k -ar 48000 -vf \"scale=(iw*sar)*min(' + str(outw) + '/(iw*sar)\\,' + str(outh) + '/ih):ih*min(' + str(outw) + '/(iw*sar)\\,' + str(outh) + '/ih), pad=' + str(outw) + ':' + str(outh) + ':(' + str(outw) + '-iw*min(' + str(outw) + '/iw\\,' + str(outh) + '/ih))/2:(' + str(outh) + '-ih*min(' + str(outw) + '/iw\\,' + str(outh) + '/ih))/2, fps=23.976\" -af loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=' + loudness['input_i'] + ':measured_LRA=' + loudness['input_lra'] + ':measured_TP=' + loudness['input_tp'] + ':measured_thresh=' + loudness['input_thresh'] + ':offset=' + loudness['target_offset'] + ':linear=true:print_format=summary temp/conv/intro.mp4')
-
-    loudness = loud('doorbell.wav')
-    os.system('ffmpeg -hide_banner -i doorbell.wav -af loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=' + loudness['input_i'] + ':measured_LRA=' + loudness['input_lra'] + ':measured_TP=' + loudness['input_tp'] + ':measured_thresh=' + loudness['input_thresh'] + ':offset=' + loudness['target_offset'] + ':linear=true:print_format=summary temp/conv/doorbell.wav')
+    subprocess.run(buildFFmpegCommand('doorbell.wav', 'temp/conv/doorbell.wav'))
 
     dur = 0.0
     for i in range(1, 61):
@@ -67,10 +63,9 @@ def main():
             title.write(textwrap.fill(re.sub('(?i)\s*[\[\{\(][^[\[\{\(]*(official|version|edited|video|explicit).*[\]\}\)]', '', vidinfo['title']), width=65))
         dur = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', 'temp/orig/' + str(i) + '.mkv']))
         start = random.uniform(0, dur - 60)
-        loudness = loud('temp/orig/' + str(i) + '.mkv', start, True)
         crop_results = subprocess.Popen(['ffmpeg -hide_banner -ss ' + str(start) + ' -i temp/orig/' + str(i) + '.mkv -vf cropdetect=24:1:0 -t 60 -f null - 2>&1 | awk \'/crop/ { print $NF }\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
-        dim = crop_results.split(':')
-        os.system('ffmpeg -hide_banner -ss ' + str(start) + ' -i temp/orig/' + str(i) + '.mkv -i temp/conv/doorbell.wav -c:v libx264 -profile:v baseline -level:v 4.0 -crf 18 -preset ' + q + ' -pix_fmt yuv420p -c:a aac -b:a 256k -ar 48000 -vf \"scale=(iw*sar)*min(' + str(outw) + '/(' + dim[0] + '*sar)\\,' + str(outh) + '/' + dim[1] + '):ih*min(' + str(outw) + '/(' + dim[0] + '*sar)\\,' + str(outh) + '/' + dim[1] + '), crop=min(' + str(outw) + '\\,iw):min(' + str(outh) + '\\,ih), pad=' + str(outw) + ':' + str(outh) + ':(' + str(outw) + '-iw*min(' + str(outw) + '/iw\\,' + str(outh) + '/ih))/2:(' + str(outh) + '-ih*min(' + str(outw) + '/iw\\,' + str(outh) + '/ih))/2, fps=23.976, drawtext=textfile=temp/title.txt:fontfile=titlefont.ttf:alpha=\'if(lt(t,3),0,if(lt(t,4),(t-3)/1,if(lt(t,11),1,if(lt(t,12),(1-(t-11))/1,0))))\':x=(w-text_w)/2:y=' + str(outh * 0.8) + ':fontsize=' + str(outh * 0.042) + ':fontcolor=0x212121:box=1:boxcolor=0xffffff@0.85:boxborderw=' + str(outh * 0.014) + '\" -filter_complex [0:a]loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=' + loudness['input_i'] + ':measured_LRA=' + loudness['input_lra'] + ':measured_TP=' + loudness['input_tp'] + ':measured_thresh=' + loudness['input_thresh'] + ':offset=' + loudness['target_offset'] + ':linear=true:print_format=summary[a1],[a1][1:a]amix=dropout_transition=0:normalize=false[a2] -t 60 -map 0:v -map \"[a2]\" temp/conv/' + str(i) + '.mp4')
+        main.dim = crop_results.split(':')
+        subprocess.run(buildFFmpegCommand('temp/orig/' + str(i) + '.mkv', 'temp/conv/' + str(i) + '.mp4', True, True, start))
         os.remove('temp/orig/' + str(i) + '.mkv')
 
     endtime = datetime.now().isoformat()
@@ -83,8 +78,56 @@ def loud(file, start = 0, mv = False):
         data = subprocess.run(['ffmpeg', '-hide_banner', '-ss', str(start), '-i', file, '-vn', '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json', '-t', '60', '-f', 'null', '-'], stderr=subprocess.PIPE).stderr.decode('utf-8')
     else:
         data = subprocess.run(['ffmpeg', '-hide_banner', '-i', file, '-vn', '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json', '-f', 'null', '-'], stderr=subprocess.PIPE).stderr.decode('utf-8')
+    print(data)
     loudness = json.loads('{' + data.split('{')[1].split('}')[0] + '}')
     return loudness
+
+def buildFFmpegCommand(fin, fout, has_video = False, mv = False, start = 0):
+    loudness = loud(fin, start, mv)
+    scale = 'scale=(iw*sar)*min(' + str(main.args.outw) + '/(iw*sar)\\,' + str(main.args.outh) + '/ih):ih*min(' + str(main.args.outw) + '/(iw*sar)\\,' + str(main.args.outh) + '/ih)'
+    pad = 'pad=' + str(main.args.outw) + ':' + str(main.args.outh) + ':(' + str(main.args.outw) + '-iw*min(' + str(main.args.outw) + '/iw\\,' + str(main.args.outh) + '/ih))/2:(' + str(main.args.outh) + '-ih*min(' + str(main.args.outw) + '/iw\\,' + str(main.args.outh) + '/ih))/2'
+    drawtext = ''
+    if mv:
+        commands = ['ffmpeg', '-hide_banner', '-ss', str(start), '-i', fin, '-i', 'temp/conv/doorbell.wav']
+        scale = 'scale=(iw*sar)*min(' + str(main.args.outw) + '/(' + main.dim[0] + '*sar)\\,' + str(main.args.outh) + '/' + main.dim[1] + '):ih*min(' + str(main.args.outw) + '/(' + main.dim[0] + '*sar)\\,' + str(main.args.outh) + '/' + main.dim[1] + '), crop=min(' + str(main.args.outw) + '\\,iw):min(' + str(main.args.outh) + '\\,ih)'
+        drawtext = ', drawtext=textfile=temp/title.txt:fontfile=titlefont.ttf:alpha=\'if(lt(t,3),0,if(lt(t,4),(t-3)/1,if(lt(t,11),1,if(lt(t,12),(1-(t-11))/1,0))))\':x=(w-text_w)/2:y=' + str(main.args.outh * 0.8) + ':fontsize=' + str(main.args.outh * 0.042) + ':fontcolor=0x212121:box=1:boxcolor=0xffffff@0.85:boxborderw=' + str(main.args.outh * 0.014)
+    else:
+        commands = ['ffmpeg', '-hide_banner', '-i', fin]
+    if has_video:
+        commands += [
+            '-c:v',
+            'libx264',
+            '-profile:v',
+            'baseline',
+            '-level:v',
+            '4.0',
+            '-crf',
+            '18',
+            '-preset',
+            main.args.preset,
+            '-pix_fmt',
+            'yuv420p',
+            '-c:a',
+            'aac',
+            '-b:a',
+            '256k',
+            '-ar',
+            '48000'
+        ]
+        if main.args.vfr:
+            commands += ['-vsync', 'vfr', '-video_track_timescale', '90k', '-vf', scale + ',' + pad + drawtext]
+        else:
+            commands += ['-vf', scale + ',' + pad + ',fps=' + str(main.args.fps) + drawtext]
+    if loudness:
+        loudnorm = 'loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=' + loudness['input_i'] + ':measured_LRA=' + loudness['input_lra'] + ':measured_TP=' + loudness['input_tp'] + ':measured_thresh=' + loudness['input_thresh'] + ':offset=' + loudness['target_offset'] + ':linear=true:print_format=summary'
+        if mv:
+            commands += ['-filter_complex', '[0:a]' + loudnorm + '[a1],[a1][1:a]amix=dropout_transition=0:normalize=false[a2]', '-t', '60', '-map', '0:v', '-map', '[a2]']
+        else:
+            if 'inf' not in loudness['input_i'] and 'inf' not in loudness['input_tp'] and 'inf' not in loudness['target_offset']:
+                commands += ['-af', loudnorm]
+    commands.append(fout)
+
+    return commands
 
 if __name__ == "__main__":
     main()
