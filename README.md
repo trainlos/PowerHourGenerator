@@ -64,7 +64,7 @@ Scaling the output video to the screen resolution of the iPhone 13 with variable
 
 `python3 r.py --outh 1170 --outw 2532 --vfr 1`
 
-Outputting a 320x240 video with a framerate of 15 fps.
+Outputting a 320x240 video with a framerate of 15 fps:
 
 `python3 r.py --outw 320 --outh 240 --fps 15`
 
