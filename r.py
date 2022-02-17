@@ -112,7 +112,9 @@ def buildFFmpegCommand(fin, fout, has_video = False, mv = False, start = 0):
             '-b:a',
             '256k',
             '-ar',
-            '48000'
+            '48000',
+            '-ac',
+            '2'
         ]
         if main.args.vfr:
             commands += ['-vsync', 'vfr', '-video_track_timescale', '90k', '-vf', scale + ',' + pad + drawtext]
