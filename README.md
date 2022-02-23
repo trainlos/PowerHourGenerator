@@ -6,20 +6,33 @@
 ## HOW TO RUN
 `python3 r.py`
 
-'list.txt' must contain 60 or more URLs each on a separate line. Currently only YouTube URLs are supported. This script does not perform any URL sanitization so please sanitize your URLs to decrease the chances of parsing errors. Both full and shortened YouTube URLs are accepted. Here are some examples of properly formatted URLs:
+list.txt must contain 60 or more URLs each on a separate line. Currently only YouTube URLs are supported. This script does not perform any URL sanitization so please sanitize your URLs to decrease the chances of parsing errors. Both full and shortened YouTube URLs are accepted. Here are some examples of properly formatted URLs:
 > https://youtu.be/jNQXAC9IVRw
 >
 > https://www.youtube.com/watch?v=jNQXAC9IVRw
 
 ## FILE REPLACEMENTS
-'intro.mp4' can be replaced by any .mp4 file. Just delete (or rename) the included 'intro.mp4' file and then copy your new intro in place of it. Make sure the new file has the correct filename of 'intro.mp4'.
+The default files this script looks for are:
 
-Similarly, 'doorbell.wav' can be replaced by another .wav file.
+ - intro.mp4
+ - outro.mp4
+ - doorbell.wav
+ - titlefont.ttf
 
-'titlefont.ttf' can be replaced by any other .ttf file. If this file is missing and FFmpeg was configured with `--enable-libfontconfig` then the system default sans font will be used instead.
+The included files can be replaced by any other valid file. Just delete (or rename) the included file and copy your new file in place of it with the appropriate filename. Alternatively, you can use the arguments listed below to specify a file with a different location or extension.
 
-## OPTIONAL ARGUMENTS
-`--preset PRESET`
+`-i, --intro PATH`
+
+`-o, --outro PATH`
+
+`-d, --doorbell PATH`
+
+`-t, --font PATH`
+
+The intro and outro files are optional, but a doorbell file is required. If the font file is missing and FFmpeg was configured with `--enable-libfontconfig` then the system default sans font will be used instead.
+
+## ADDITIONAL ARGUMENTS
+`-p, --preset PRESET`
 
   All presets will output the same quality, but a slower preset will achieve a smaller filesize.
 
@@ -34,22 +47,22 @@ Similarly, 'doorbell.wav' can be replaced by another .wav file.
   - slower
   - veryslow
 
-`--fps FLOAT`
+`-f, --fps FLOAT`
 
   Sets the framerate of the output video. Default is 23.976.
 
-`--vfr INT`
+`-v, --vfr INT`
 
   Video sync method
 
   - 0 *(default)*: Output video will be encoded at the constant framerate provided by `--fps`.
   - 1: Output video will attempt to retain the different framerates of the input videos. `--fps` is ignored when this option is selected. May have A/V sync issues on some hardware / video players.
 
-`--outw INT`
+`-w, --outw INT`
 
   Sets the width of the output video. Default is 1920.
 
-`--outh INT`
+`-h, --outh INT`
 
   Sets the height of the output video. Default is 1080.
 
@@ -71,8 +84,7 @@ Outputting a 320x240 video with a framerate of 15 fps:
 ## TROUBLESHOOTING
 If anything goes wrong that causes the script to stop before the end just delete the entire 'temp' folder to reset everything to a clean starting position.
 
-YouTube doesn't properly encode their VP9 videos. [FFmpeg just added a fix for this on 2022-02-13](http://git.videolan.org/?p=ffmpeg.git;a=commitdiff;h=68595b46cb374658432fff998e82e5ff434557ac) so until this patch more widely available in prebuilt versions of FFmpeg, this power hour script will retain the logic to ignore VP9 streams. This may result in downloaded videos occasionally having reduced quality compared to the version you see on YouTube.
+YouTube doesn't properly encode their VP9 videos. [FFmpeg just added a fix for this on 2022-02-13](http://git.videolan.org/?p=ffmpeg.git;a=commitdiff;h=68595b46cb374658432fff998e82e5ff434557ac) so until there is a new major release of FFmpeg with the patch included this power hour script will retain the logic to ignore VP9 streams. This may result in downloaded videos occasionally having reduced quality compared to the version you see on YouTube.
 
 ## TODO
-- Optimize non-music removal step so videos aren't re-encoded twice
-- Add option for outro and allow the last song to play out fully
+- Optimize non-music removal step so videos aren't re-encoded twice.
