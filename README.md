@@ -87,4 +87,4 @@ If anything goes wrong that causes the script to stop before the end just delete
 YouTube doesn't properly encode their VP9 videos. [FFmpeg just added a fix for this on 2022-02-13](http://git.videolan.org/?p=ffmpeg.git;a=commitdiff;h=68595b46cb374658432fff998e82e5ff434557ac) so until there is a new major release of FFmpeg with the patch included this power hour script will retain the logic to ignore VP9 streams. This may result in downloaded videos occasionally having reduced quality compared to the version you see on YouTube.
 
 ## TODO
-- Optimize non-music removal step so videos aren't re-encoded twice.
+- Optimize non-music removal step to solve desync issues without drastically increasing render time.
