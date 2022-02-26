@@ -105,15 +105,13 @@ def main():
         with open('temp/title.txt', 'w') as title:
             title.write(textwrap.fill(re.sub('(?i)\s*[\[\{\(][^[\[\{\(]*(official|version|edited|video|explicit).*[\]\}\)]', '', vidinfo['title']), width=65))
         dur = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', 'temp/orig/' + str(i) + '.mkv']))
-        start = random.uniform(0, dur - 60)
         if i == 60:
             crop_results = subprocess.Popen(['ffmpeg -hide_banner -i temp/orig/' + str(i) + '.mkv -vf cropdetect=24:1:0 -f null - 2>&1 | awk \'/crop/ { print $NF }\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
-            main.dim = crop_results.split(':')
-            subprocess.run(buildFFmpegCommand('temp/orig/60.mkv', 'temp/conv/60.mp4'))
+            subprocess.run(buildFFmpegCommand('temp/orig/60.mkv', 'temp/conv/60.mp4', True, 0, crop_results.split(':')))
         else:
+            start = random.uniform(0, dur - 60)
             crop_results = subprocess.Popen(['ffmpeg -hide_banner -ss ' + str(start) + ' -i temp/orig/' + str(i) + '.mkv -vf cropdetect=24:1:0 -t 60 -f null - 2>&1 | awk \'/crop/ { print $NF }\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
-            main.dim = crop_results.split(':')
-            subprocess.run(buildFFmpegCommand('temp/orig/' + str(i) + '.mkv', 'temp/conv/' + str(i) + '.mp4', True, start))
+            subprocess.run(buildFFmpegCommand('temp/orig/' + str(i) + '.mkv', 'temp/conv/' + str(i) + '.mp4', True, start, crop_results.split(':')))
         os.remove('temp/orig/' + str(i) + '.mkv')
 
     endtime = datetime.now().isoformat()
@@ -129,14 +127,14 @@ def loud(file, start = 0, mv = False):
     loudness = json.loads('{' + data.split('{')[1].split('}')[0] + '}')
     return loudness
 
-def buildFFmpegCommand(fin, fout, mv = False, start = 0):
+def buildFFmpegCommand(fin, fout, mv = False, start = 0, dim = []):
     loudness = loud(fin, start, mv)
     scale = 'scale=(iw*sar)*min(' + str(main.args.outw) + '/(iw*sar)\\,' + str(main.args.outh) + '/ih):ih*min(' + str(main.args.outw) + '/(iw*sar)\\,' + str(main.args.outh) + '/ih)'
     pad = 'pad=' + str(main.args.outw) + ':' + str(main.args.outh) + ':(' + str(main.args.outw) + '-iw*min(' + str(main.args.outw) + '/iw\\,' + str(main.args.outh) + '/ih))/2:(' + str(main.args.outh) + '-ih*min(' + str(main.args.outw) + '/iw\\,' + str(main.args.outh) + '/ih))/2'
     drawtext = ''
     if mv:
         commands = ['ffmpeg', '-hide_banner', '-ss', str(start), '-i', fin, '-i', 'temp/conv/doorbell.wav']
-        scale = 'scale=(iw*sar)*min(' + str(main.args.outw) + '/(' + main.dim[0] + '*sar)\\,' + str(main.args.outh) + '/' + main.dim[1] + '):ih*min(' + str(main.args.outw) + '/(' + main.dim[0] + '*sar)\\,' + str(main.args.outh) + '/' + main.dim[1] + '), crop=min(' + str(main.args.outw) + '\\,iw):min(' + str(main.args.outh) + '\\,ih)'
+        scale = 'scale=(iw*sar)*min(' + str(main.args.outw) + '/(' + dim[0] + '*sar)\\,' + str(main.args.outh) + '/' + dim[1] + '):ih*min(' + str(main.args.outw) + '/(' + dim[0] + '*sar)\\,' + str(main.args.outh) + '/' + dim[1] + '), crop=min(' + str(main.args.outw) + '\\,iw):min(' + str(main.args.outh) + '\\,ih)'
         drawtext = ', drawtext=textfile=temp/title.txt:fontfile=' + main.args.font + ':alpha=\'if(lt(t,3),0,if(lt(t,4),(t-3)/1,if(lt(t,11),1,if(lt(t,12),(1-(t-11))/1,0))))\':x=(w-text_w)/2:y=' + str(main.args.outh * 0.8) + ':fontsize=' + str(main.args.outh * 0.042) + ':fontcolor=0x212121:box=1:boxcolor=0xffffff@0.85:boxborderw=' + str(main.args.outh * 0.014)
     else:
         commands = ['ffmpeg', '-hide_banner', '-i', fin]
