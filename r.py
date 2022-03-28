@@ -69,16 +69,15 @@ def main():
 
     with open('temp/files.txt', 'w') as f:
         if main.args.intro:
-            f.write('file \'conv/intro.mp4\'')
             subprocess.run(buildFFmpegCommand(main.args.intro, 'temp/conv/intro.mp4'))
             dur = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', main.args.intro]))
-            f.write('\nduration ' + str(dur))
-        for x in range(60):
-            f.write('\nfile \'conv/' + str(x+1) + '.mp4\'')
-            f.write('\nduration 60')
-        if main.args.outro:
-            f.write('\nfile \'conv/outro.mp4\'')
-            subprocess.run(buildFFmpegCommand(main.args.outro, 'temp/conv/outro.mp4'))
+            f.write('file \'conv/intro.mp4\'\nduration ' + str(dur))
+        for x in range(59):
+            f.write('\nfile \'conv/' + str(x+1) + '.mp4\'\nduration 60')
+        f.write('\nfile \'conv/60.mp4\'\nduration ')
+
+    if main.args.outro:
+        subprocess.run(buildFFmpegCommand(main.args.outro, 'temp/conv/outro.mp4'))
 
     loudness = loud(main.args.doorbell)
     subprocess.run(['ffmpeg', '-hide_banner', '-i', main.args.doorbell, '-c:a', 'pcm_s16le', '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=' + loudness['input_i'] + ':measured_LRA=' + loudness['input_lra'] + ':measured_TP=' + loudness['input_tp'] + ':measured_thresh=' + loudness['input_thresh'] + ':offset=' + loudness['target_offset'] + ':linear=true:print_format=summary', 'temp/conv/doorbell.wav'])
@@ -106,7 +105,11 @@ def main():
             title.write(textwrap.fill(re.sub('(?i)\s*[\[\{\(][^[\[\{\(]*(official|version|edited|video|explicit).*[\]\}\)]', '', vidinfo['title']), width=65))
         dur = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', 'temp/orig/' + str(i) + '.mkv']))
         if i == 60:
-            crop_results = subprocess.Popen(['ffmpeg -hide_banner -i temp/orig/' + str(i) + '.mkv -vf cropdetect=24:1:0 -f null - 2>&1 | awk \'/crop/ { print $NF }\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
+            with open('temp/files.txt', 'a') as f:
+                f.write(str(dur))
+                if main.args.outro:
+                    f.write('\nfile \'conv/outro.mp4\'')
+            crop_results = subprocess.Popen(['ffmpeg -hide_banner -i temp/orig/60.mkv -vf cropdetect=24:1:0 -f null - 2>&1 | awk \'/crop/ { print $NF }\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
             subprocess.run(buildFFmpegCommand('temp/orig/60.mkv', 'temp/conv/60.mp4', True, 0, crop_results.split(':')))
         else:
             start = random.uniform(0, dur - 60)
@@ -156,7 +159,7 @@ def buildFFmpegCommand(fin, fout, mv = False, start = 0, dim = []):
         '-b:a',
         '256k',
         '-ar',
-        '48000',
+        '44100',
         '-ac',
         '2'
     ]
