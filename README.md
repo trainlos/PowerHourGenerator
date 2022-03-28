@@ -16,7 +16,7 @@ The default files this script looks for are:
 
  - intro.mp4
  - outro.mp4
- - doorbell.wav
+ - doorbell.m4a
  - titlefont.ttf
 
 The included files can be replaced by any other valid file. Just delete (or rename) the included file and copy your new file in place of it with the appropriate filename. Alternatively, you can use the arguments listed below to specify a file with a different location or extension.

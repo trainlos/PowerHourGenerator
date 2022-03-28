@@ -50,7 +50,7 @@ def main():
 
     main.args.intro = input_check(main.args.intro, 'intro.mp4')
     main.args.outro = input_check(main.args.outro, 'outro.mp4')
-    main.args.doorbell = input_check(main.args.doorbell, 'doorbell.wav', True)
+    main.args.doorbell = input_check(main.args.doorbell, 'doorbell.m4a', True)
 
     if main.args.font:
         if not os.path.exists(main.args.font):
