@@ -28,21 +28,21 @@ def main():
         if argin:
             if not os.path.exists(argin):
                 if os.path.exists(defin):
-                    proceed = input(argin + ' cannot be found. \nWould you like to use ' + defin + ' instead? [y/n] ')
+                    proceed = input(f'{argin} cannot be found. \nWould you like to use {defin} instead? [y/n] ')
                     if proceed.lower() == 'y' or proceed.lower() == 'yes':
                         return defin
                     else:
                         sys.exit('Abort.')
                 else:
-                    sys.exit(argin + ' cannot be found.')
+                    sys.exit(f'{argin} cannot be found.')
             else:
                 return argin
         else:
             if not os.path.exists(defin):
                 if req:
-                    sys.exit(defin + ' cannot be found.')
+                    sys.exit(f'{defin} cannot be found.')
                 else:
-                    proceed = input(defin + ' cannot be found. \nWould you like to proceed without it? [y/n] ')
+                    proceed = input(f'{defin} cannot be found. \nWould you like to proceed without it? [y/n] ')
                     if proceed.lower() != 'y' and proceed.lower() != 'yes':
                         sys.exit('Abort.')
             else:
@@ -55,7 +55,7 @@ def main():
     if main.args.font:
         if not os.path.exists(main.args.font):
             if os.path.exists('titlefont.ttf'):
-                proceed = input(main.args.font + ' cannot be found. \nWould you like to use titlefont.ttf instead? [y/n] ')
+                proceed = input(f'{main.args.font} cannot be found. \nWould you like to use titlefont.ttf instead? [y/n] ')
                 if proceed.lower() == 'y' or proceed.lower() == 'yes':
                     main.args.font = 'titlefont.ttf'
                 else:
@@ -71,24 +71,25 @@ def main():
         if main.args.intro:
             subprocess.run(buildFFmpegCommand(main.args.intro, 'temp/conv/intro.mp4'))
             dur = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', main.args.intro]))
-            f.write('file \'conv/intro.mp4\'\nduration ' + str(dur))
+            f.write(f'file \'conv/intro.mp4\'\nduration {dur}')
         for x in range(59):
-            f.write('\nfile \'conv/' + str(x+1) + '.mp4\'\nduration 60')
+            f.write(f'\nfile \'conv/{x+1}.mp4\'\nduration 60')
         f.write('\nfile \'conv/60.mp4\'\nduration ')
 
     if main.args.outro:
         subprocess.run(buildFFmpegCommand(main.args.outro, 'temp/conv/outro.mp4'))
 
     loudness = loud(main.args.doorbell)
-    subprocess.run(['ffmpeg', '-hide_banner', '-i', main.args.doorbell, '-c:a', 'pcm_s16le', '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=' + loudness['input_i'] + ':measured_LRA=' + loudness['input_lra'] + ':measured_TP=' + loudness['input_tp'] + ':measured_thresh=' + loudness['input_thresh'] + ':offset=' + loudness['target_offset'] + ':linear=true:print_format=summary', 'temp/conv/doorbell.wav'])
+    subprocess.run(['ffmpeg', '-hide_banner', '-i', main.args.doorbell, '-c:a', 'pcm_s16le', '-af', f'loudnorm=I=-16:TP=-1.5:LRA=11:measured_I={loudness["input_i"]}:measured_LRA={loudness["input_lra"]}:measured_TP={loudness["input_tp"]}:measured_thresh={loudness["input_thresh"]}:offset={loudness["target_offset"]}:linear=true:print_format=summary', 'temp/conv/doorbell.wav'])
 
     dur = 0.0
     for i in range(1, 61):
         ydl_opts = {
             'format': 'bv[vcodec!=vp9]+ba',
             'merge_output_format': 'mkv',
-            'outtmpl': 'temp/orig/' + str(i),
+            'outtmpl': f'temp/orig/{i}',
             'ignoreerrors': 'True',
+            'noplaylist': 'True',
             'postprocessors': [{
                 'key': 'SponsorBlock',
                 'when': 'pre_process'
@@ -103,7 +104,7 @@ def main():
             vidinfo = ydl.extract_info(vids.pop(random.randint(0, len(vids) - 1)), download=True)
         with open('temp/title.txt', 'w') as title:
             title.write(textwrap.fill(re.sub('(?i)\s*[\[\{\(][^[\[\{\(]*(official|version|edited|video|explicit).*[\]\}\)]', '', vidinfo['title']), width=65))
-        dur = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', 'temp/orig/' + str(i) + '.mkv']))
+        dur = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', f'temp/orig/{i}.mkv']))
         if i == 60:
             with open('temp/files.txt', 'a') as f:
                 f.write(str(dur))
@@ -113,12 +114,12 @@ def main():
             subprocess.run(buildFFmpegCommand('temp/orig/60.mkv', 'temp/conv/60.mp4', True, 0, crop_results.split(':')))
         else:
             start = random.uniform(0, dur - 60)
-            crop_results = subprocess.Popen(['ffmpeg -hide_banner -ss ' + str(start) + ' -i temp/orig/' + str(i) + '.mkv -vf cropdetect=24:1:0 -t 60 -f null - 2>&1 | awk \'/crop/ { print $NF }\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
-            subprocess.run(buildFFmpegCommand('temp/orig/' + str(i) + '.mkv', 'temp/conv/' + str(i) + '.mp4', True, start, crop_results.split(':')))
-        os.remove('temp/orig/' + str(i) + '.mkv')
+            crop_results = subprocess.Popen([f'ffmpeg -hide_banner -ss {start} -i temp/orig/{i}.mkv -vf cropdetect=24:1:0 -t 60 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
+            subprocess.run(buildFFmpegCommand(f'temp/orig/{i}.mkv', f'temp/conv/{i}.mp4', True, start, crop_results.split(':')))
+        os.remove(f'temp/orig/{i}.mkv')
 
     endtime = datetime.now().isoformat()
-    os.system('ffmpeg -hide_banner -f concat -safe 0 -i temp/files.txt -c copy \"' + endtime[:13] + endtime[14:16] + ' PH.mp4\"')
+    os.system(f'ffmpeg -hide_banner -f concat -safe 0 -i temp/files.txt -c copy \"{endtime[:13]}{endtime[14:16]} PH.mp4\"')
     shutil.rmtree('temp')
     print('Video was successfully generated!')
 
@@ -132,13 +133,13 @@ def loud(file, start = 0, mv = False):
 
 def buildFFmpegCommand(fin, fout, mv = False, start = 0, dim = []):
     loudness = loud(fin, start, mv)
-    scale = 'scale=(iw*sar)*min(' + str(main.args.outw) + '/(iw*sar)\\,' + str(main.args.outh) + '/ih):ih*min(' + str(main.args.outw) + '/(iw*sar)\\,' + str(main.args.outh) + '/ih)'
-    pad = 'pad=' + str(main.args.outw) + ':' + str(main.args.outh) + ':(' + str(main.args.outw) + '-iw*min(' + str(main.args.outw) + '/iw\\,' + str(main.args.outh) + '/ih))/2:(' + str(main.args.outh) + '-ih*min(' + str(main.args.outw) + '/iw\\,' + str(main.args.outh) + '/ih))/2'
+    scale = f'scale=(iw*sar)*min({main.args.outw}/(iw*sar)\\,{main.args.outh}/ih):ih*min({main.args.outw}/(iw*sar)\\,{main.args.outh}/ih)'
+    pad = f'pad={main.args.outw}:{main.args.outh}:({main.args.outw}-iw*min({main.args.outw}/iw\\,{main.args.outh}/ih))/2:({main.args.outh}-ih*min({main.args.outw}/iw\\,{main.args.outh}/ih))/2'
     drawtext = ''
     if mv:
         commands = ['ffmpeg', '-hide_banner', '-ss', str(start), '-i', fin, '-i', 'temp/conv/doorbell.wav']
-        scale = 'scale=(iw*sar)*min(' + str(main.args.outw) + '/(' + dim[0] + '*sar)\\,' + str(main.args.outh) + '/' + dim[1] + '):ih*min(' + str(main.args.outw) + '/(' + dim[0] + '*sar)\\,' + str(main.args.outh) + '/' + dim[1] + '), crop=min(' + str(main.args.outw) + '\\,iw):min(' + str(main.args.outh) + '\\,ih)'
-        drawtext = ', drawtext=textfile=temp/title.txt:fontfile=' + main.args.font + ':alpha=\'if(lt(t,3),0,if(lt(t,4),(t-3)/1,if(lt(t,11),1,if(lt(t,12),(1-(t-11))/1,0))))\':x=(w-text_w)/2:y=' + str(main.args.outh * 0.8) + ':fontsize=' + str(main.args.outh * 0.042) + ':fontcolor=0x212121:box=1:boxcolor=0xffffff@0.85:boxborderw=' + str(main.args.outh * 0.014)
+        scale = f'scale=(iw*sar)*min({main.args.outw}/({dim[0]}*sar)\\,{main.args.outh}/{dim[1]}):ih*min({main.args.outw}/({dim[0]}*sar)\\,{main.args.outh}/{dim[1]}), crop=min({main.args.outw}\\,iw):min({main.args.outh}\\,ih)'
+        drawtext = f', drawtext=textfile=temp/title.txt:fontfile={main.args.font}:alpha=\'if(lt(t,3),0,if(lt(t,4),(t-3)/1,if(lt(t,11),1,if(lt(t,12),(1-(t-11))/1,0))))\':x=(w-text_w)/2:y={main.args.outh * 0.8}:fontsize={main.args.outh * 0.042}:fontcolor=0x212121:box=1:boxcolor=0xffffff@0.85:boxborderw={main.args.outh * 0.014}'
     else:
         commands = ['ffmpeg', '-hide_banner', '-i', fin]
     commands += [
@@ -164,13 +165,13 @@ def buildFFmpegCommand(fin, fout, mv = False, start = 0, dim = []):
         '2'
     ]
     if main.args.vfr:
-        commands += ['-vsync', 'vfr', '-video_track_timescale', '90k', '-vf', scale + ',' + pad + drawtext]
+        commands += ['-vsync', 'vfr', '-video_track_timescale', '90k', '-vf', f'{scale},{pad}{drawtext}']
     else:
-        commands += ['-vf', scale + ',' + pad + ',fps=' + str(main.args.fps) + drawtext]
+        commands += ['-vf', f'{scale},{pad},fps={main.args.fps}{drawtext}']
     if loudness:
-        loudnorm = 'loudnorm=I=-16:TP=-1.5:LRA=11:measured_I=' + loudness['input_i'] + ':measured_LRA=' + loudness['input_lra'] + ':measured_TP=' + loudness['input_tp'] + ':measured_thresh=' + loudness['input_thresh'] + ':offset=' + loudness['target_offset'] + ':linear=true:print_format=summary'
+        loudnorm = f'loudnorm=I=-16:TP=-1.5:LRA=11:measured_I={loudness["input_i"]}:measured_LRA={loudness["input_lra"]}:measured_TP={loudness["input_tp"]}:measured_thresh={loudness["input_thresh"]}:offset={loudness["target_offset"]}:linear=true:print_format=summary'
         if mv:
-            commands += ['-filter_complex', '[0:a]' + loudnorm + '[a1],[a1][1:a]amix=dropout_transition=0:normalize=false[a2]', '-t', '60', '-map', '0:v', '-map', '[a2]']
+            commands += ['-filter_complex', f'[0:a]{loudnorm}[a1],[a1][1:a]amix=dropout_transition=0:normalize=false[a2]', '-t', '60', '-map', '0:v', '-map', '[a2]']
         else:
             if 'inf' not in loudness['input_i'] and 'inf' not in loudness['input_tp'] and 'inf' not in loudness['target_offset']:
                 commands += ['-af', loudnorm]
