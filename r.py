@@ -28,8 +28,8 @@ def main():
         if argin:
             if not os.path.exists(argin):
                 if os.path.exists(defin):
-                    proceed = input(f'{argin} cannot be found. \nWould you like to use {defin} instead? [y/n] ')
-                    if proceed.lower() == 'y' or proceed.lower() == 'yes':
+                    proceed = input(f'{argin} cannot be found. \nWould you like to use {defin} instead? [Y/n] ')
+                    if proceed.lower() == 'y' or proceed.lower() == 'yes' or not proceed:
                         return defin
                     else:
                         sys.exit('Abort.')
@@ -42,8 +42,8 @@ def main():
                 if req:
                     sys.exit(f'{defin} cannot be found.')
                 else:
-                    proceed = input(f'{defin} cannot be found. \nWould you like to proceed without it? [y/n] ')
-                    if proceed.lower() != 'y' and proceed.lower() != 'yes':
+                    proceed = input(f'{defin} cannot be found. \nWould you like to proceed without it? [Y/n] ')
+                    if proceed and proceed.lower() != 'y' and proceed.lower() != 'yes':
                         sys.exit('Abort.')
             else:
                 return defin
@@ -55,8 +55,8 @@ def main():
     if main.args.font:
         if not os.path.exists(main.args.font):
             if os.path.exists('titlefont.ttf'):
-                proceed = input(f'{main.args.font} cannot be found. \nWould you like to use titlefont.ttf instead? [y/n] ')
-                if proceed.lower() == 'y' or proceed.lower() == 'yes':
+                proceed = input(f'{main.args.font} cannot be found. \nWould you like to use titlefont.ttf instead? [Y/n] ')
+                if proceed.lower() == 'y' or proceed.lower() == 'yes' or not proceed:
                     main.args.font = 'titlefont.ttf'
                 else:
                     sys.exit('Abort.')
