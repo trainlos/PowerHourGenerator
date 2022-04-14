@@ -86,6 +86,7 @@ def main():
     for i in range(1, 61):
         ydl_opts = {
             'format': 'bv[vcodec!=vp9]+ba',
+            'format_sort': ['hdr:sdr', 'quality', 'res', 'fps', 'source', 'codec'],
             'merge_output_format': 'mkv',
             'outtmpl': f'temp/orig/{i}',
             'ignoreerrors': 'True',
