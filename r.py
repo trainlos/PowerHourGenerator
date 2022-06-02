@@ -6,9 +6,10 @@ def main():
     parser = argparse.ArgumentParser(add_help = False)
     parser.add_argument('-p', '--preset', type = str, choices = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow', 'placebo'], default='ultrafast')
     parser.add_argument('-f', '--fps', type = float, default = 24000/1001)
-    parser.add_argument('-v', '--vfr', type = int, default = 0)
+    parser.add_argument('-v', '--vfr', action=argparse.BooleanOptionalAction)
     parser.add_argument('-w', '--outw', type = int, default = 1920)
     parser.add_argument('-h', '--outh', type = int, default = 1080)
+    parser.add_argument('-z', '--zoom', action=argparse.BooleanOptionalAction)
     parser.add_argument('-i', '--intro',  type=str)
     parser.add_argument('-o', '--outro',  type=str)
     parser.add_argument('-d', '--doorbell', type=str)
@@ -111,12 +112,26 @@ def main():
                 f.write(str(dur))
                 if main.args.outro:
                     f.write('\nfile \'conv/outro.mp4\'')
-            crop_results = subprocess.Popen(['ffmpeg -hide_banner -i temp/orig/60.mkv -vf cropdetect=24:1:0 -f null - 2>&1 | awk \'/crop/ { print $NF }\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
-            subprocess.run(buildFFmpegCommand('temp/orig/60.mkv', 'temp/conv/60.mp4', True, 0, crop_results.split(':')))
+            print('Checking for letterboxing/pillarboxing...')
+            crop_black = subprocess.Popen(['ffmpeg -hide_banner -i temp/orig/60.mkv -vf cropdetect=24:1:0 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
+            crop_white = subprocess.Popen([f'ffmpeg -hide_banner -i temp/orig/60.mkv -vf crop={crop_black},negate,cropdetect=24:1:0 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:].split(':')
+            crop_black = crop_black.split(':')
+            if (int(crop_white[0]) <= int(crop_black[0])) and (int(crop_white[1]) <= int(crop_black[1])):
+                crop_results = crop_white
+            else:
+                crop_results = crop_black
+            subprocess.run(buildFFmpegCommand('temp/orig/60.mkv', 'temp/conv/60.mp4', True, 0, crop_results))
         else:
             start = random.uniform(0, dur - 60)
-            crop_results = subprocess.Popen([f'ffmpeg -hide_banner -ss {start} -i temp/orig/{i}.mkv -vf cropdetect=24:1:0 -t 60 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
-            subprocess.run(buildFFmpegCommand(f'temp/orig/{i}.mkv', f'temp/conv/{i}.mp4', True, start, crop_results.split(':')))
+            print('Checking for letterboxing/pillarboxing...')
+            crop_black = subprocess.Popen([f'ffmpeg -hide_banner -ss {start} -i temp/orig/{i}.mkv -vf cropdetect=24:1:0 -t 60 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
+            crop_white = subprocess.Popen([f'ffmpeg -hide_banner -ss {start} -i temp/orig/{i}.mkv -vf crop={crop_black},negate,cropdetect=24:1:0 -t 60 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:].split(':')
+            crop_black = crop_black.split(':')
+            if (int(crop_white[0]) <= int(crop_black[0])) and (int(crop_white[1]) <= int(crop_black[1])):
+                crop_results = crop_black
+            else:
+                crop_results = crop_white
+            subprocess.run(buildFFmpegCommand(f'temp/orig/{i}.mkv', f'temp/conv/{i}.mp4', True, start, crop_results))
         os.remove(f'temp/orig/{i}.mkv')
 
     endtime = datetime.now().isoformat()
@@ -133,13 +148,17 @@ def loud(file, start = 0, mv = False):
     return loudness
 
 def buildFFmpegCommand(fin, fout, mv = False, start = 0, dim = []):
+    if main.args.zoom:
+        m = 'max'
+    else:
+        m = 'min'
     loudness = loud(fin, start, mv)
-    scale = f'scale=(iw*sar)*min({main.args.outw}/(iw*sar)\\,{main.args.outh}/ih):ih*min({main.args.outw}/(iw*sar)\\,{main.args.outh}/ih)'
+    scale = f'scale=(iw*sar)*{m}({main.args.outw}/(iw*sar)\\,{main.args.outh}/ih):ih*{m}({main.args.outw}/(iw*sar)\\,{main.args.outh}/ih), crop=min({main.args.outw}\\,iw):min({main.args.outh}\\,ih)'
     pad = f'pad={main.args.outw}:{main.args.outh}:({main.args.outw}-iw*min({main.args.outw}/iw\\,{main.args.outh}/ih))/2:({main.args.outh}-ih*min({main.args.outw}/iw\\,{main.args.outh}/ih))/2'
     drawtext = ''
     if mv:
         commands = ['ffmpeg', '-hide_banner', '-ss', str(start), '-i', fin, '-i', 'temp/conv/doorbell.wav']
-        scale = f'scale=(iw*sar)*min({main.args.outw}/({dim[0]}*sar)\\,{main.args.outh}/{dim[1]}):ih*min({main.args.outw}/({dim[0]}*sar)\\,{main.args.outh}/{dim[1]}), crop=min({main.args.outw}\\,iw):min({main.args.outh}\\,ih)'
+        scale = f'scale=(iw*sar)*{m}({main.args.outw}/({dim[0]}*sar)\\,{main.args.outh}/{dim[1]}):ih*{m}({main.args.outw}/({dim[0]}*sar)\\,{main.args.outh}/{dim[1]}), crop=min({main.args.outw}\\,iw):min({main.args.outh}\\,ih)'
         drawtext = f', drawtext=textfile=temp/title.txt:fontfile={main.args.font}:alpha=\'if(lt(t,3),0,if(lt(t,4),(t-3)/1,if(lt(t,11),1,if(lt(t,12),(1-(t-11))/1,0))))\':x=(w-text_w)/2:y={main.args.outh * 0.8}:fontsize={main.args.outh * 0.042}:fontcolor=0x212121:box=1:boxcolor=0xffffff@0.85:boxborderw={main.args.outh * 0.014}'
     else:
         commands = ['ffmpeg', '-hide_banner', '-i', fin]
