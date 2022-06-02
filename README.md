@@ -51,13 +51,6 @@ The intro and outro files are optional, but a doorbell file is required. If the 
 
   Sets the framerate of the output video. Default is 23.976.
 
-`-v, --vfr INT`
-
-  Video sync method
-
-  - 0 *(default)*: Output video will be encoded at the constant framerate provided by `--fps`.
-  - 1: Output video will attempt to retain the different framerates of the input videos. `--fps` is ignored when this option is selected. May have A/V sync issues on some hardware / video players.
-
 `-w, --outw INT`
 
   Sets the width of the output video. Default is 1920.
@@ -65,6 +58,22 @@ The intro and outro files are optional, but a doorbell file is required. If the 
 `-h, --outh INT`
 
   Sets the height of the output video. Default is 1080.
+
+`--no-vfr`
+
+  Output video will be encoded at the constant framerate provided by `--fps`. *(default)*
+
+`-v, --vfr`
+
+  Output video will attempt to retain the different framerates of the input videos. `--fps` is ignored when this option is selected. May have A/V sync issues on some hardware / video players.
+
+`--no-zoom`
+
+  Input videos will be letterboxed/pillarboxed to fit in the output frame size without cropping. *(default)*
+
+`-z, --zoom`
+
+  Input videos will be cropped and zoomed to fill the entire output frame size.
 
 
 
@@ -75,7 +84,7 @@ Prioritizing a smaller output file size over speed:
 
 Scaling the output video to the screen resolution of the iPhone 13 with variable framerate:
 
-`python3 r.py --outh 1170 --outw 2532 --vfr 1`
+`python3 r.py --outh 1170 --outw 2532 --vfr`
 
 Outputting a 320x240 video with a framerate of 15 fps:
 
