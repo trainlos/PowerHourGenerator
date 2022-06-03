@@ -6,10 +6,7 @@
 ## HOW TO RUN
 `python3 r.py`
 
-list.txt must contain 60 or more URLs each on a separate line. Currently only YouTube URLs are supported. This script does not perform any URL sanitization so please sanitize your URLs to decrease the chances of parsing errors. Both full and shortened YouTube URLs are accepted. Here are some examples of properly formatted URLs:
-> https://youtu.be/jNQXAC9IVRw
->
-> https://www.youtube.com/watch?v=jNQXAC9IVRw
+list.txt must contain 60 or more URLs each on a separate line. All sites supported by yt-dlp should work, but SponsorBlock's non-music removal will only work on YouTube videos.
 
 ## FILE REPLACEMENTS
 The default files this script looks for are:

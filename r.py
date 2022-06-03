@@ -86,10 +86,10 @@ def main():
     dur = 0.0
     for i in range(1, 61):
         ydl_opts = {
-            'format': 'bv[vcodec!=vp9]+ba',
+            'format': 'bv[vcodec!=vp9]+ba/b',
             'format_sort': ['hdr:sdr', 'quality', 'res', 'fps', 'source', 'codec'],
             'merge_output_format': 'mkv',
-            'outtmpl': f'temp/orig/{i}',
+            'outtmpl': f'temp/orig/{i}.%(ext)s',
             'ignoreerrors': 'True',
             'noplaylist': 'True',
             'postprocessors': [{
@@ -106,33 +106,31 @@ def main():
             vidinfo = ydl.extract_info(vids.pop(random.randint(0, len(vids) - 1)), download=True)
         with open('temp/title.txt', 'w') as title:
             title.write(textwrap.fill(re.sub('(?i)\s*[\[\{\(][^[\[\{\(]*(official|version|edited|video|explicit).*[\]\}\)]', '', vidinfo['title']), width=65))
-        dur = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', f'temp/orig/{i}.mkv']))
+        dur = float(subprocess.check_output(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', f'temp/orig/{i}.{vidinfo["ext"]}']))
         if i == 60:
             with open('temp/files.txt', 'a') as f:
                 f.write(str(dur))
                 if main.args.outro:
                     f.write('\nfile \'conv/outro.mp4\'')
             print('Checking for letterboxing/pillarboxing...')
-            crop_black = subprocess.Popen(['ffmpeg -hide_banner -i temp/orig/60.mkv -vf cropdetect=24:1:0 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
-            crop_white = subprocess.Popen([f'ffmpeg -hide_banner -i temp/orig/60.mkv -vf crop={crop_black},negate,cropdetect=24:1:0 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:].split(':')
-            crop_black = crop_black.split(':')
+            crop_black = subprocess.Popen([f'ffmpeg -hide_banner -i temp/orig/60.{vidinfo["ext"]} -vf cropdetect=24:1:0 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:].split(':')
+            crop_white = subprocess.Popen([f'ffmpeg -hide_banner -i temp/orig/60.{vidinfo["ext"]} -vf crop={":".join(crop_black)},negate,cropdetect=24:1:0 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:].split(':')
             if (int(crop_white[0]) <= int(crop_black[0])) and (int(crop_white[1]) <= int(crop_black[1])):
                 crop_results = crop_white
             else:
                 crop_results = crop_black
-            subprocess.run(buildFFmpegCommand('temp/orig/60.mkv', 'temp/conv/60.mp4', True, 0, crop_results))
+            subprocess.run(buildFFmpegCommand(f'temp/orig/60.{vidinfo["ext"]}', 'temp/conv/60.mp4', True, 0, crop_results))
         else:
             start = random.uniform(0, dur - 60)
             print('Checking for letterboxing/pillarboxing...')
-            crop_black = subprocess.Popen([f'ffmpeg -hide_banner -ss {start} -i temp/orig/{i}.mkv -vf cropdetect=24:1:0 -t 60 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:]
-            crop_white = subprocess.Popen([f'ffmpeg -hide_banner -ss {start} -i temp/orig/{i}.mkv -vf crop={crop_black},negate,cropdetect=24:1:0 -t 60 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:].split(':')
-            crop_black = crop_black.split(':')
+            crop_black = subprocess.Popen([f'ffmpeg -hide_banner -ss {start} -i temp/orig/{i}.{vidinfo["ext"]} -vf cropdetect=24:1:0 -t 60 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:].split(':')
+            crop_white = subprocess.Popen([f'ffmpeg -hide_banner -ss {start} -i temp/orig/{i}.{vidinfo["ext"]} -vf crop={":".join(crop_black)},negate,cropdetect=24:1:0 -t 60 -f null - 2>&1 | awk \'/crop/ {{ print $NF }}\' | tail -1'], shell=True, stdout=subprocess.PIPE, universal_newlines=True).stdout.read().strip()[5:].split(':')
             if (int(crop_white[0]) <= int(crop_black[0])) and (int(crop_white[1]) <= int(crop_black[1])):
-                crop_results = crop_black
-            else:
                 crop_results = crop_white
-            subprocess.run(buildFFmpegCommand(f'temp/orig/{i}.mkv', f'temp/conv/{i}.mp4', True, start, crop_results))
-        os.remove(f'temp/orig/{i}.mkv')
+            else:
+                crop_results = crop_black
+            subprocess.run(buildFFmpegCommand(f'temp/orig/{i}.{vidinfo["ext"]}', f'temp/conv/{i}.mp4', True, start, crop_results))
+        os.remove(f'temp/orig/{i}.{vidinfo["ext"]}')
 
     endtime = datetime.now().isoformat()
     os.system(f'ffmpeg -hide_banner -f concat -safe 0 -i temp/files.txt -c copy \"{endtime[:13]}{endtime[14:16]} PH.mp4\"')
